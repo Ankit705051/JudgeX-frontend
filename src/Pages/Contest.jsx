@@ -62,7 +62,11 @@ const Contest = () => {
       const response = await contestAPI.getContestById(id);
       setContest(response.data.data);
     } catch (error) {
-      console.error("Error fetching contest:", error);
+      if (error.response?.status === 401) {
+        navigate("/login");
+      } else {
+        console.error("Error fetching contest:", error);
+      }
     } finally {
       setLoading(false);
     }
@@ -74,8 +78,12 @@ const Contest = () => {
       const response = await contestProblemAPI.getContestProblems(id, { limit: 100 });
       setContestProblems(response.data.data || []);
     } catch (error) {
-      console.error("Error fetching contest problems:", error);
-      setContestProblems([]);
+      if (error.response?.status === 401) {
+        navigate("/login");
+      } else {
+        console.error("Error fetching contest problems:", error);
+        setContestProblems([]);
+      }
     } finally {
       setProblemsLoading(false);
     }
@@ -87,7 +95,11 @@ const Contest = () => {
       setMyParticipation(response.data.data);
       setIsRegistered(true);
     } catch (error) {
-      setIsRegistered(false);
+      if (error.response?.status === 401) {
+        navigate("/login");
+      } else {
+        setIsRegistered(false);
+      }
     }
   };
 
@@ -130,7 +142,11 @@ const Contest = () => {
       setSubmissions(data.submissions || []);
       setSubmissionsTotalPages(data.pagination?.totalPages || 1);
     } catch (error) {
-      console.error("Error fetching my submissions:", error);
+      if (error.response?.status === 401) {
+        navigate("/login");
+      } else {
+        console.error("Error fetching my submissions:", error);
+      }
     } finally {
       setSubmissionsLoading(false);
     }
@@ -147,7 +163,11 @@ const Contest = () => {
       setParticipants(data.participants || []);
       setParticipantsTotalPages(data.pagination?.totalPages || 1);
     } catch (error) {
-      console.error("Error fetching participants:", error);
+      if (error.response?.status === 401) {
+        navigate("/login");
+      } else {
+        console.error("Error fetching participants:", error);
+      }
     } finally {
       setParticipantsLoading(false);
     }
@@ -159,8 +179,12 @@ const Contest = () => {
       setSelectedSubmission(response.data.data);
       setShowCodeModal(true);
     } catch (error) {
-      console.error("Error fetching submission details:", error);
-      alert("Unable to load submission code details.");
+      if (error.response?.status === 401) {
+        navigate("/login");
+      } else {
+        console.error("Error fetching submission details:", error);
+        alert("Unable to load submission code details.");
+      }
     }
   };
 
@@ -169,7 +193,11 @@ const Contest = () => {
       const response = await contestParticipantAPI.getMyRank(id);
       setMyRank(response.data.data.rank);
     } catch (error) {
-      console.error("Error fetching rank:", error);
+      if (error.response?.status === 401) {
+        navigate("/login");
+      } else {
+        console.error("Error fetching rank:", error);
+      }
     }
   };
 

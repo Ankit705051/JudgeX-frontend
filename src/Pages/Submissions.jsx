@@ -26,7 +26,11 @@ const Submissions = () => {
       setSubmissions(response.data.data.submissions || []);
       setTotalPages(response.data.data.pagination?.totalPages || 1);
     } catch (error) {
-      console.error("Error fetching submissions:", error);
+      if (error.response?.status === 401) {
+        navigate("/login");
+      } else {
+        console.error("Error fetching submissions:", error);
+      }
     } finally {
       setLoading(false);
     }

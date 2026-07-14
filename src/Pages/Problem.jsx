@@ -196,15 +196,19 @@ const Problem = () => {
         const response = await discussionAPI.getProblemDiscussions(problem._id, { page: 1, limit: 10 });
         setDiscussions(response.data.data || []);
       } catch (err) {
-        console.error("Error fetching discussions:", err);
-        setDiscussions([]);
+        if (err.response?.status === 401) {
+          navigate("/login");
+        } else {
+          console.error("Error fetching discussions:", err);
+          setDiscussions([]);
+        }
       } finally {
         setDiscussionsLoading(false);
       }
     };
 
     fetchDiscussions();
-  }, [problem?._id, activeTab]);
+  }, [problem?._id, activeTab, navigate]);
 
   // Fetch submissions history
   useEffect(() => {

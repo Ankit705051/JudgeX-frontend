@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { discussionAPI } from "../services/api";
 import DiscussionForm from "../components/DiscussionForm";
 import DiscussionCard from "../components/DiscussionCard";
 
 const Discuss = () => {
   const { problemId } = useParams();
+  const navigate = useNavigate();
   const [discussions, setDiscussions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -24,7 +25,11 @@ const Discuss = () => {
       const response = await discussionAPI.getAllDiscussions();
       setCurrentUserId(response.data.user?._id);
     } catch (error) {
-      console.error("Error fetching user:", error);
+      if (error.response?.status === 401) {
+        navigate("/login");
+      } else {
+        console.error("Error fetching user:", error);
+      }
     }
   };
 
@@ -44,7 +49,11 @@ const Discuss = () => {
 
       setDiscussions(response.data.data || []);
     } catch (error) {
-      console.error("Error fetching discussions:", error);
+      if (error.response?.status === 401) {
+        navigate("/login");
+      } else {
+        console.error("Error fetching discussions:", error);
+      }
     } finally {
       setLoading(false);
     }

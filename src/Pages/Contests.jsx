@@ -37,15 +37,19 @@ const Contests = () => {
         setContests(list);
         setTotalPages(response.data.pagination?.totalPages || payload.pagination?.totalPages || 1);
       } catch (err) {
-        setError(err.response?.data?.message || "Unable to load contests.");
-        setContests([]);
+        if (err.response?.status === 401) {
+          navigate("/login");
+        } else {
+          setError(err.response?.data?.message || "Unable to load contests.");
+          setContests([]);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchContests();
-  }, [currentPage, searchQuery]);
+  }, [currentPage, searchQuery, navigate]);
 
   const getCountdownString = (targetDate) => {
     const diff = new Date(targetDate) - new Date();
