@@ -10,24 +10,19 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [editMode, setEditMode] = useState(false);
 
-  // Profile update form
   const [formData, setFormData] = useState({
     name: "",
     email: "",
   });
-
-  // Password change form
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
 
-  // Avatar upload
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
 
-  // UI states
   const [updating, setUpdating] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
@@ -64,18 +59,16 @@ const Profile = () => {
     setUpdating(true);
     try {
       if (avatarFile) {
-        // Handle avatar upload with FormData
         const uploadFormData = new FormData();
         uploadFormData.append("avatar", avatarFile);
         uploadFormData.append("name", formData.name);
         uploadFormData.append("email", formData.email);
 
-        // Use axios directly for multipart/form-data
         const axios = (await import("axios")).default;
         const token = localStorage.getItem("token");
         
        await axios.put(
-          `${import.meta.env.VITE_API_URL}/api/v1/auth/user`,
+          `https://judgex-rw01.onrender.com/api/v1/auth/user`,
           uploadFormData,
           {
             headers: {
@@ -85,7 +78,6 @@ const Profile = () => {
           }
         );
       } else {
-        // Regular update without avatar
         await authAPI.updateUser(formData);
       }
       

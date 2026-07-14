@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:3000/api/v1";
+const API_BASE_URL = "https://judgex-rw01.onrender.com/api/v1";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
