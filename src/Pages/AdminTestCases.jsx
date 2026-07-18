@@ -2,6 +2,23 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { testCaseAPI, problemAPI } from "../services/api";
 
+const bulkTestCaseTemplate = {
+  testcases: [
+    {
+      input: "1 2",
+      output: "3",
+      explanation: "1 + 2 = 3",
+      isHidden: false,
+    },
+    {
+      input: "10 20",
+      output: "30",
+      explanation: "",
+      isHidden: true,
+    },
+  ],
+};
+
 const AdminTestCases = () => {
   const navigate = useNavigate();
   const { problemId } = useParams();
@@ -16,6 +33,8 @@ const AdminTestCases = () => {
     explanation: "",
     isHidden: false,
   });
+  const [formMode, setFormMode] = useState("single");
+  const [bulkJson, setBulkJson] = useState(JSON.stringify(bulkTestCaseTemplate, null, 2));
 
   useEffect(() => {
     fetchProblem();
@@ -56,12 +75,21 @@ const AdminTestCases = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      if (editingTestCase) {
-        await testCaseAPI.updateTestCase(editingTestCase._id, formData);
-        alert("Test case updated successfully!");
+      if (formMode === "bulk") {
+        const parsed = JSON.parse(bulkJson);
+        if (!parsed.testcases || !Array.isArray(parsed.testcases) || parsed.testcases.length === 0) {
+          throw new Error("Bulk import expects a JSON object containing a 'testcases' array.");
+        }
+        await testCaseAPI.bulkCreateTestCases(problemId, parsed);
+        alert(`${parsed.testcases.length} test cases created successfully!`);
       } else {
-        await testCaseAPI.createTestCase(problemId, formData);
-        alert("Test case created successfully!");
+        if (editingTestCase) {
+          await testCaseAPI.updateTestCase(editingTestCase._id, formData);
+          alert("Test case updated successfully!");
+        } else {
+          await testCaseAPI.createTestCase(problemId, formData);
+          alert("Test case created successfully!");
+        }
       }
       setShowForm(false);
       setEditingTestCase(null);
@@ -69,7 +97,8 @@ const AdminTestCases = () => {
       fetchTestCases();
     } catch (error) {
       console.error("Error saving test case:", error);
-      alert("Failed to save test case");
+      const errorMessage = error.response?.data?.message || error.message || "Failed to save test case";
+      alert(`Error: ${errorMessage}`);
     }
   };
 
@@ -103,11 +132,13 @@ const AdminTestCases = () => {
       explanation: "",
       isHidden: false,
     });
+    setBulkJson(JSON.stringify(bulkTestCaseTemplate, null, 2));
   };
 
   const handleCancel = () => {
     setShowForm(false);
     setEditingTestCase(null);
+    setFormMode("single");
     resetForm();
   };
 
@@ -117,7 +148,11 @@ const AdminTestCases = () => {
         <div className="max-w-4xl mx-auto px-6 py-12">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold">
-              {editingTestCase ? "Edit Test Case" : "Create New Test Case"}
+              {formMode === "bulk"
+                ? "Bulk Import Test Cases"
+                : editingTestCase
+                ? "Edit Test Case"
+                : "Create New Test Case"}
             </h1>
             <button
               onClick={handleCancel}
@@ -127,74 +162,133 @@ const AdminTestCases = () => {
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block mb-2 text-sm font-medium">Input</label>
-              <textarea
-                name="input"
-                value={formData.input}
-                onChange={handleInputChange}
-                required
-                rows={4}
-                className="w-full rounded border border-zinc-700 bg-[#171717] px-4 py-2 text-zinc-200 outline-none focus:border-zinc-500 font-mono text-sm"
-                placeholder="Enter test input..."
-              />
-            </div>
-
-            <div>
-              <label className="block mb-2 text-sm font-medium">Expected Output</label>
-              <textarea
-                name="output"
-                value={formData.output}
-                onChange={handleInputChange}
-                required
-                rows={4}
-                className="w-full rounded border border-zinc-700 bg-[#171717] px-4 py-2 text-zinc-200 outline-none focus:border-zinc-500 font-mono text-sm"
-                placeholder="Enter expected output..."
-              />
-            </div>
-
-            <div>
-              <label className="block mb-2 text-sm font-medium">Explanation (optional)</label>
-              <textarea
-                name="explanation"
-                value={formData.explanation}
-                onChange={handleInputChange}
-                rows={2}
-                className="w-full rounded border border-zinc-700 bg-[#171717] px-4 py-2 text-zinc-200 outline-none focus:border-zinc-500 text-sm"
-                placeholder="Enter explanation for this test case..."
-              />
-            </div>
-
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                name="isHidden"
-                id="isHidden"
-                checked={formData.isHidden}
-                onChange={handleInputChange}
-                className="rounded border-zinc-700 bg-[#171717]"
-              />
-              <label htmlFor="isHidden" className="text-sm text-zinc-300">
-                Hidden test case (not visible to users)
-              </label>
-            </div>
-
-            <div className="flex justify-end gap-3">
+          {!editingTestCase && (
+            <div className="mb-6 inline-flex rounded border border-zinc-800 bg-[#111111] p-1">
               <button
                 type="button"
-                onClick={handleCancel}
-                className="rounded border border-zinc-700 px-6 py-2 text-sm font-medium text-zinc-300 hover:border-zinc-500"
+                onClick={() => setFormMode("single")}
+                className={`rounded px-4 py-2 text-sm font-medium transition ${
+                  formMode === "single"
+                    ? "bg-blue-600 text-white"
+                    : "text-zinc-400 hover:text-zinc-200"
+                }`}
               >
-                Cancel
+                Single Create
               </button>
               <button
-                type="submit"
-                className="rounded bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-500"
+                type="button"
+                onClick={() => setFormMode("bulk")}
+                className={`rounded px-4 py-2 text-sm font-medium transition ${
+                  formMode === "bulk"
+                    ? "bg-blue-600 text-white"
+                    : "text-zinc-400 hover:text-zinc-200"
+                }`}
               >
-                {editingTestCase ? "Update Test Case" : "Create Test Case"}
+                Bulk Create
               </button>
             </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {formMode === "bulk" ? (
+              <div className="space-y-4">
+                <div className="rounded border border-zinc-800 bg-[#111111] p-4 text-sm text-zinc-400">
+                  Paste a JSON object containing a <code className="text-blue-400">testcases</code> array. Each object should have input, output, optional explanation, and optional isHidden.
+                </div>
+                <textarea
+                  value={bulkJson}
+                  onChange={(e) => setBulkJson(e.target.value)}
+                  rows={16}
+                  spellCheck="false"
+                  className="w-full rounded border border-zinc-700 bg-[#171717] px-4 py-3 font-mono text-sm text-zinc-200 outline-none focus:border-zinc-500"
+                />
+                <div className="flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="rounded border border-zinc-700 px-6 py-2 text-sm font-medium text-zinc-300 hover:border-zinc-500"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-500"
+                  >
+                    Bulk Submit
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label className="block mb-2 text-sm font-medium">Input</label>
+                  <textarea
+                    name="input"
+                    value={formData.input}
+                    onChange={handleInputChange}
+                    required
+                    rows={4}
+                    className="w-full rounded border border-zinc-700 bg-[#171717] px-4 py-2 text-zinc-200 outline-none focus:border-zinc-500 font-mono text-sm"
+                    placeholder="Enter test input..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-2 text-sm font-medium">Expected Output</label>
+                  <textarea
+                    name="output"
+                    value={formData.output}
+                    onChange={handleInputChange}
+                    required
+                    rows={4}
+                    className="w-full rounded border border-zinc-700 bg-[#171717] px-4 py-2 text-zinc-200 outline-none focus:border-zinc-500 font-mono text-sm"
+                    placeholder="Enter expected output..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-2 text-sm font-medium">Explanation (optional)</label>
+                  <textarea
+                    name="explanation"
+                    value={formData.explanation}
+                    onChange={handleInputChange}
+                    rows={2}
+                    className="w-full rounded border border-zinc-700 bg-[#171717] px-4 py-2 text-zinc-200 outline-none focus:border-zinc-500 text-sm"
+                    placeholder="Enter explanation for this test case..."
+                  />
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    name="isHidden"
+                    id="isHidden"
+                    checked={formData.isHidden}
+                    onChange={handleInputChange}
+                    className="rounded border-zinc-700 bg-[#171717]"
+                  />
+                  <label htmlFor="isHidden" className="text-sm text-zinc-300">
+                    Hidden test case (not visible to users)
+                  </label>
+                </div>
+
+                <div className="flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="rounded border border-zinc-700 px-6 py-2 text-sm font-medium text-zinc-300 hover:border-zinc-500"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-500"
+                  >
+                    {editingTestCase ? "Update Test Case" : "Create Test Case"}
+                  </button>
+                </div>
+              </>
+            )}
           </form>
         </div>
       </main>

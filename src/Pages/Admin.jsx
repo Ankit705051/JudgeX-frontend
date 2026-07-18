@@ -61,7 +61,7 @@ const Admin = () => {
           </div>
 
           <div
-            onClick={() => navigate("/admin/testcases")}
+            onClick={() => navigate("/admin/problems")}
             className="bg-[#171717] rounded-lg p-6 border border-zinc-800 hover:border-zinc-700 cursor-pointer transition-colors"
           >
             <div className="flex items-center gap-4 mb-4">

@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = "https://judgex-rw01.onrender.com/api/v1";
+const API_BASE_URL = "http://localhost:3000/api/v1";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -126,6 +126,7 @@ export const contestSubmissionAPI = {
 export const testCaseAPI = {
   getProblemTestCases: (problemId) => api.get(`/testCase/problem/${problemId}`),
   createTestCase: (problemId, data) => api.post(`/testCase/problem/${problemId}`, data),
+  bulkCreateTestCases: (problemId, data) => api.post(`/testCase/problem/${problemId}/bulk`, data),
   getAdminTestCases: (problemId) => api.get(`/testCase/problem/${problemId}`),
   updateTestCase: (id, data) => api.put(`/testCase/${id}`, data),
   deleteTestCase: (id) => api.delete(`/testCase/${id}`),
@@ -135,6 +136,8 @@ export const adminAPI = {
   createProblem: (data) => api.post("/problem/create", data),
   updateProblem: (id, data) => api.patch(`/problem/${id}`, data),
   deleteProblem: (id) => api.delete(`/problem/${id}`),
+  bulkCreateProblems: (data) =>
+    api.post("/problem/bulk", data),
 };
 
 export const contestProblemAPI = {

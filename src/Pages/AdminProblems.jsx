@@ -2,34 +2,70 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { problemAPI, adminAPI } from "../services/api";
 
+const emptyFormData = {
+  title: "",
+  slug: "",
+  description: "",
+  difficulty: "easy",
+  constraints: "",
+  timeLimit: 1,
+  memoryLimit: 256,
+  functionName: "solution",
+  returnType: "int",
+  parameters: [{ name: "", type: "" }],
+  visibility: "public",
+  tags: [],
+  examples: [],
+  codeTemplate: [],
+  hints: "",
+  solution: [],
+};
+
+const bulkTemplate = [
+  {
+    title: "Two Sum",
+    slug: "two-sum",
+    description: "Given an array of integers, find two numbers that add up to a target value.",
+    difficulty: "easy",
+    constraints: "1 <= nums.length <= 10^5",
+    timeLimit: 1,
+    memoryLimit: 256,
+    functionName: "twoSum",
+    returnType: "int[]",
+    parameters: [
+      { name: "nums", type: "int[]" },
+      { name: "target", type: "int" },
+    ],
+    visibility: "public",
+    tags: ["array", "hash-map"],
+    examples: [
+      { input: "[2,7,11,15], 9", output: "[0,1]", explanation: "2 + 7 = 9" },
+    ],
+    codeTemplate: [
+      {
+        language: "javascript",
+        starterCode: "function twoSum(nums, target) {\n  \n}",
+      },
+    ],
+    hints: "Use a map to track values you have seen.",
+    solution: [
+      {
+        language: "javascript",
+        solution: "function twoSum(nums, target) {\n  \n}",
+      },
+    ],
+  },
+];
+
 const AdminProblems = () => {
   const navigate = useNavigate();
   const [problems, setProblems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [formMode, setFormMode] = useState("single");
   const [editingProblem, setEditingProblem] = useState(null);
-  const [formData, setFormData] = useState({
-    title: "",
-    slug: "",
-    description: "",
-    difficulty: "easy",
-    constraints: "",
-    timeLimit: 1,
-    memoryLimit: 256,
-    functionName: "solution",
-    returnType: "int",
-    parameters: [{ name: "", type: "" }],
-    visibility: "public",
-    tags: [],
-    examples: [],
-    codeTemplate: [],
-    hints: "",
-    solution: [],
-  });
-
-  useEffect(() => {
-    fetchProblems();
-  }, []);
+  const [formData, setFormData] = useState(emptyFormData);
+  const [bulkJson, setBulkJson] = useState(JSON.stringify(bulkTemplate, null, 2));
 
   const fetchProblems = async () => {
     setLoading(true);
@@ -42,6 +78,12 @@ const AdminProblems = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    void (async () => {
+      await fetchProblems();
+    })();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -130,18 +172,35 @@ const AdminProblems = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const submissionData = {
-        ...formData,
-        timeLimit: Number(formData.timeLimit),
-        memoryLimit: Number(formData.memoryLimit),
-        slug: formData.slug || formData.title.toLowerCase().replace(/\s+/g, '-'),
-      };
-      if (editingProblem) {
-        await adminAPI.updateProblem(editingProblem._id, submissionData);
-        alert("Problem updated successfully!");
+      if (formMode === "bulk") {
+        const parsedProblems = JSON.parse(bulkJson);
+        if (!Array.isArray(parsedProblems) || parsedProblems.length === 0) {
+          throw new Error("Bulk import expects a non-empty JSON array.");
+        }
+
+        const payload = parsedProblems.map((problem) => ({
+          ...problem,
+          slug: problem.slug || problem.title?.toLowerCase().replace(/\s+/g, "-"),
+          timeLimit: Number(problem.timeLimit),
+          memoryLimit: Number(problem.memoryLimit),
+        }));
+
+        await adminAPI.bulkCreateProblems(payload);
+        alert(`${payload.length} problems created successfully!`);
       } else {
-        await adminAPI.createProblem(submissionData);
-        alert("Problem created successfully!");
+        const submissionData = {
+          ...formData,
+          timeLimit: Number(formData.timeLimit),
+          memoryLimit: Number(formData.memoryLimit),
+          slug: formData.slug || formData.title.toLowerCase().replace(/\s+/g, "-"),
+        };
+        if (editingProblem) {
+          await adminAPI.updateProblem(editingProblem._id, submissionData);
+          alert("Problem updated successfully!");
+        } else {
+          await adminAPI.createProblem(submissionData);
+          alert("Problem created successfully!");
+        }
       }
       setShowForm(false);
       setEditingProblem(null);
@@ -155,6 +214,7 @@ const AdminProblems = () => {
   };
 
   const handleEdit = (problem) => {
+    setFormMode("single");
     setEditingProblem(problem);
     setFormData({
       title: problem.title || "",
@@ -190,29 +250,14 @@ const AdminProblems = () => {
   };
 
   const resetForm = () => {
-    setFormData({
-      title: "",
-      slug: "",
-      description: "",
-      difficulty: "easy",
-      constraints: "",
-      timeLimit: 1,
-      memoryLimit: 256,
-      functionName: "solution",
-      returnType: "int",
-      parameters: [{ name: "", type: "" }],
-      visibility: "public",
-      tags: [],
-      examples: [],
-      codeTemplate: [],
-      hints: "",
-      solution: [],
-    });
+    setFormData(emptyFormData);
+    setBulkJson(JSON.stringify(bulkTemplate, null, 2));
   };
 
   const handleCancel = () => {
     setShowForm(false);
     setEditingProblem(null);
+    setFormMode("single");
     resetForm();
   };
 
@@ -222,7 +267,11 @@ const AdminProblems = () => {
         <div className="max-w-4xl mx-auto px-6 py-12">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold">
-              {editingProblem ? "Edit Problem" : "Create New Problem"}
+              {formMode === "bulk"
+                ? "Bulk Import Problems"
+                : editingProblem
+                ? "Edit Problem"
+                : "Create New Problem"}
             </h1>
             <button
               onClick={handleCancel}
@@ -232,7 +281,65 @@ const AdminProblems = () => {
             </button>
           </div>
 
+          {!editingProblem && (
+            <div className="mb-6 inline-flex rounded border border-zinc-800 bg-[#111111] p-1">
+              <button
+                type="button"
+                onClick={() => setFormMode("single")}
+                className={`rounded px-4 py-2 text-sm font-medium transition ${
+                  formMode === "single"
+                    ? "bg-blue-600 text-white"
+                    : "text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                Single Create
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormMode("bulk")}
+                className={`rounded px-4 py-2 text-sm font-medium transition ${
+                  formMode === "bulk"
+                    ? "bg-blue-600 text-white"
+                    : "text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                Bulk Create
+              </button>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
+            {formMode === "bulk" ? (
+              <div className="space-y-4">
+                <div className="rounded border border-zinc-800 bg-[#111111] p-4 text-sm text-zinc-400">
+                  Paste a JSON array of problem objects. Each item should match the backend create schema.
+                  You can use the template below as a starting point.
+                </div>
+                <textarea
+                  value={bulkJson}
+                  onChange={(e) => setBulkJson(e.target.value)}
+                  rows={24}
+                  spellCheck="false"
+                  className="w-full rounded border border-zinc-700 bg-[#171717] px-4 py-3 font-mono text-sm text-zinc-200 outline-none focus:border-zinc-500"
+                />
+                <div className="flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="rounded border border-zinc-700 px-6 py-2 text-sm font-medium text-zinc-300 hover:border-zinc-500"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-500"
+                  >
+                    Bulk Submit
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
             <div>
               <label className="block mb-2 text-sm font-medium">Title</label>
               <input
@@ -631,6 +738,8 @@ const AdminProblems = () => {
                 {editingProblem ? "Update Problem" : "Create Problem"}
               </button>
             </div>
+              </>
+            )}
           </form>
         </div>
       </main>
@@ -651,7 +760,11 @@ const AdminProblems = () => {
             <h1 className="text-2xl font-bold">Problem Management</h1>
           </div>
           <button
-            onClick={() => setShowForm(true)}
+            onClick={() => {
+              setEditingProblem(null);
+              setFormMode("single");
+              setShowForm(true);
+            }}
             className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
           >
             + Create Problem
